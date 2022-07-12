@@ -111,7 +111,7 @@ function WaterPipeMenu.doPourNPKMenu(worldobjects, context, subMenu, player, npk
 			context:addSubMenu(fertilizerOption, subMenuFertilizer);			
 						
 			for i=1, use do
-				subMenuFertilizer:addOption(getText("ContextMenu_WaterPipe_Uses"), worldobjects, WaterPipeMenu.onPourFertilizer, i, handItem, square, player, barrel);
+				subMenuFertilizer:addOption(getText("ContextMenu_WaterPipe_Uses", i), worldobjects, WaterPipeMenu.onPourFertilizer, i, handItem, square, player, barrel);
 			end
 			
 		end
