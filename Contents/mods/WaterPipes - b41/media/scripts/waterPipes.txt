@@ -1,0 +1,31 @@
+module waterPipes
+{
+
+	imports
+	{
+		Base, farming,
+	}
+
+
+	item WaterPipe
+	{
+		Type = Drainable,
+		DisplayName = Irrigation Pipe,
+		Icon = WaterPipe.png,
+		UseDelta = 0.1,
+		UseWhileEquipped = false,
+		Weight = 1.5, 
+	}
+
+	
+	recipe Make Irrigation Pipe
+	{
+		MetalPipe,
+		
+		keep Hammer/HammerStone/BallPeenHammer,
+		keep Screwdriver,
+		
+		Result: WaterPipe,
+		Time:30.0,
+	}
+}

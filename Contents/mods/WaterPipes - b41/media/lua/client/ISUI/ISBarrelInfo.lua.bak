@@ -1,0 +1,49 @@
+
+---- Garden Hoses By Kyun, thanks to Robert Johnson for it's rain collector barrel and farming mod (among others !)
+
+ISBarrelInfo = ISPanel:derive("ISBarrelInfo");
+
+function ISBarrelInfo:initialise()
+	ISPanel.initialise(self);
+end
+
+function ISBarrelInfo:setBarrel(barrel)
+	self.barrel = barrel;
+end
+
+function ISBarrelInfo:prerender()
+	local square = getWorld():getCell():getGridSquare(self.barrel.x, self.barrel.y, self.barrel.z);
+	if not square then self:getParent():setVisible(false); return end
+	if isClient() then
+		-- Hack: because the client does not have an up-to-date list of barrels		
+		self.barrel = WaterPipe.getCurrentBarrel(square);
+	end
+	self:drawText("Barrel Status" , 32, - 14, 1,1,1,1);--getText("Farming_Plant_Information")
+end
+
+
+function ISBarrelInfo:render()
+	
+	local waterAmount = self.barrel.waterAmount;
+	if self.barrel.decimalPart then
+		waterAmount = waterAmount + self.barrel.decimalPart;
+	end
+	
+	local description = "";
+	description = description .. "barrel water amount = " .. string.format("%.2f", waterAmount) .. "\n\n";
+	
+	if self.barrel.fertilizerLvl then
+		description = description .. "barrel fertilizerLvl = " .. self.barrel.fertilizerLvl .. "\n\n";
+	end
+	
+	self:drawText(description, 20, 25, 1, 1, 1, 1, UIFont.Small);
+end
+
+function ISBarrelInfo:new (x, y, width, height, barrel)
+	local o = {}
+	o = ISPanel:new(x, y, width, height);
+	setmetatable(o, self)
+    self.__index = self
+	o.barrel = barrel;
+   return o
+end

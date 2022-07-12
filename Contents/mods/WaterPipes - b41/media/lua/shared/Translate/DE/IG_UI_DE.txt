@@ -1,0 +1,11 @@
+IGUI_DE = {
+	-- All the UI text used in game
+	-- InventoryPane
+	IGUI_WaterPipe_WaterAmount = "Wassermenge im Fass = %1",
+	IGUI_WaterPipe_FertilizerAmount = "Dünge-Level = %1",
+	IGUI_WaterPipe_BarrelInfo = "Fass Information",
+	IGUI_WaterPipe_NoMorePipe = "Keine Rohre mehr",
+	IGUI_WaterPipe_EnoughPipeBack = "Ich bekomme genug Rohre zurück",
+	IGUI_WaterPipe_RecoverPipeProgress = "Ich bekomme 1 Rohr zurück, %1 mehr bevor ich alle zurück bekomme",
+}
+

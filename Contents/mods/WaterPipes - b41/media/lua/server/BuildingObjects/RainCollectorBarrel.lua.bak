@@ -1,0 +1,379 @@
+--***********************************************************
+--**                    ROBERT JOHNSON                     **
+--***********************************************************
+
+require "BuildingObjects/ISBuildingObject"
+
+-- this class extend ISBuildingObject, it's a class to help you drag around/place an item in the world
+RainCollectorBarrel = ISBuildingObject:derive("RainCollectorBarrel");
+-- list of our barrel in the world
+RainCollectorBarrel.barrels = {};
+RainCollectorBarrel.modData = nil
+
+RainCollectorBarrel.wantNoise = true
+local noise = function(msg)
+	if (RainCollectorBarrel.wantNoise) then print('rain barrel: '..msg) end
+end
+
+function RainCollectorBarrel:create(x, y, z, north, sprite)
+	local cell = getWorld():getCell();
+	self.sq = cell:getGridSquare(x, y, z);
+	self.javaObject = IsoThumpable.new(cell, self.sq, sprite, north, self);
+	buildUtil.setInfo(self.javaObject, self);
+	buildUtil.consumeMaterial(self);
+	-- the barrel have 200 base health + 100 per carpentry lvl
+	self.javaObject:setMaxHealth(self:getHealth());
+	-- the sound that will be played when our barrel will be broken
+	self.javaObject:setBreakSound("breakdoor");
+	-- add the item to the ground
+
+	-- add some xp for because you successfully build the barrel
+	buildUtil.addWoodXp(self);
+	-- IsoObjects with 'waterAmount' 
+	self.javaObject:getModData()["waterMax"] = self.waterMax;
+	self.javaObject:getModData()["waterAmount"] = 0;
+	self.javaObject:getModData()["fertilizerLvl"] = 0;
+	self.javaObject:getModData()["decimalPart"] = 0;
+
+	self.sq:AddSpecialObject(self.javaObject);
+
+	local barrel = {};
+	barrel.x = self.sq:getX();
+	barrel.y = self.sq:getY();
+	barrel.z = self.sq:getZ();
+	barrel.waterAmount = 0;
+	barrel.waterMax = self.waterMax
+	barrel.fertilizerLvl = 0
+	barrel.decimalPart = 0
+	table.insert(RainCollectorBarrel.barrels, barrel)
+
+	self.javaObject:transmitCompleteItemToServer();
+	self.javaObject:transmitCompleteItemToClients();
+	--~ 	print("add a barrel at : " .. x .. "," .. y);
+end
+
+function RainCollectorBarrel:new(player, sprite, waterMax)
+	-- OOP stuff
+	-- we create an item (o), and return it
+	local o = {};
+	setmetatable(o, self);
+	self.__index = self;
+	o:init();
+	-- the number of sprites can be up to 4, one for each direction, you ALWAYS need at least 2 sprites, south (Sprite) and north (NorthSprite)
+	-- here we're not gonna be able to rotate our building (it's a barrel, so every face are the same), so we set that the south sprite = north sprite
+	o:setSprite(sprite);
+	o:setNorthSprite(sprite);
+	o.name = "Rain Collector Barrel";
+	o.waterMax = waterMax;
+	o.player = player;
+	-- the barrel will be dismantable (come from IsoThumpable stuff, check buildUtil.setInfo to see wich options are available)
+	o.dismantable = true;
+	-- you can't barricade it
+	o.canBarricade = false;
+	-- the item will block all the square where it placed (not like a wall for example)
+	o.blockAllTheSquare = true;
+	return o;
+end
+
+-- return the health of the new barrel, it's 200 + 100 per carpentry lvl
+function RainCollectorBarrel:getHealth()
+	return 200 + buildUtil.getWoodHealth(self);
+end
+
+-- our barrel can be placed on this square ?
+-- this function is called everytime you move the mouse over a grid square, you can for example not allow building inside house..
+function RainCollectorBarrel:isValid(square)
+	return ISBuildingObject.isValid(self, square);
+end
+
+-- called after render the ghost objects
+-- the ISBuildingObject only render 1 sprite (north, south...), for example for stairs I can render the 2 others tile for stairs here
+-- if I return false, the ghost render will be in red and I couldn't build the item
+function RainCollectorBarrel:render(x, y, z, square)
+	ISBuildingObject.render(self, x, y, z, square)
+end
+
+function RainCollectorBarrel.isRainCollectorBarrelObject(object)
+	return object ~= nil and object:getName() == "Rain Collector Barrel"
+end
+
+function RainCollectorBarrel.findObject(square)
+	if not square then return nil end
+	for i=0,square:getSpecialObjects():size()-1 do
+		local obj = square:getSpecialObjects():get(i)
+		if RainCollectorBarrel.isRainCollectorBarrelObject(obj) then
+			return obj
+		end
+	end
+	return nil
+end
+
+-- every 10 minutes we check if it's raining, to fill our water barrel
+function RainCollectorBarrel.checkRain()
+	if isClient() then return; end
+	if RainManager.isRaining() then
+		for iB,vB in ipairs(RainCollectorBarrel.barrels) do
+			if vB.waterAmount < vB.waterMax then
+				vB.waterAmount = vB.waterAmount + 1
+				local square = getWorld():getCell():getGridSquare(vB.x, vB.y, vB.z);
+				local obj = RainCollectorBarrel.findObject(square)
+				if obj then -- object might have been destroyed
+					noise('added rain to barrel at '..vB.x..","..vB.y..","..vB.z..' waterAmount='..vB.waterAmount)
+					obj:setWaterAmount(vB.waterAmount)
+					obj:transmitModData()
+				end
+				if square then
+					-- obj:setWaterAmount(vB.waterAmount) or obj:transmitModData() is going to trigger RainCollectorBarrel.saveData(vB) soon after through event
+				else
+					RainCollectorBarrel.saveData(vB);				
+				end
+			end
+		end
+	end
+end
+
+function RainCollectorBarrel.LoadGridsquare(square)
+	if isClient() then return; end
+	-- does this square have a rain barrel ?
+	for i=0,square:getSpecialObjects():size() - 1 do
+		local obj = square:getSpecialObjects():get(i)
+		if RainCollectorBarrel.isRainCollectorBarrelObject(obj) then
+			RainCollectorBarrel.loadRainBarrel(obj)
+			break
+		end
+	end
+end
+
+-- load the barrel
+function RainCollectorBarrel.loadRainBarrel(barrelObject)
+	if not barrelObject or not barrelObject:getSquare() then return end
+	local square = barrelObject:getSquare()
+	local barrel = nil;
+	-- check if we don't already have this barrel in our map (the streaming of the map make the gridsquare to reload every time)
+	for i,v in ipairs(RainCollectorBarrel.barrels) do
+		if v.x == square:getX() and v.y == square:getY() and v.z == square:getZ() then
+			barrel = v;
+			break;
+		end
+	end
+	if not barrel then -- if we don't have the barrel, it's basically when you load your saved game the first time
+		barrel = {};
+		barrel.x = square:getX();
+		barrel.y = square:getY();
+		barrel.z = square:getZ();
+		barrel.waterAmount = barrelObject:getWaterAmount()
+		barrel.waterMax = barrelObject:getModData()["waterMax"]
+		-- compatibility stuff
+		if not barrelObject:getModData()["fertilizerLvl"] then
+			barrelObject:getModData()["fertilizerLvl"] = 0
+			barrelObject:transmitModData();
+		end
+		if not barrelObject:getModData()["decimalPart"] then
+			barrelObject:getModData()["decimalPart"] = 0
+			barrelObject:transmitModData();
+		end
+		barrel.fertilizerLvl = barrelObject:getModData()["fertilizerLvl"]
+		barrel.decimalPart = barrelObject:getModData()["decimalPart"]
+
+		-- compatibility, waterAmount stored in IsoGridSquare modData
+		if square:getModData()["waterAmount"] then
+			barrel.waterAmount = tonumber(square:getModData()["waterAmount"])
+			square:getModData()["waterAmount"] = nil
+			square:getModData()["waterMax"] = nil
+			square:getModData()["alwaysTakeWater"] = nil
+			square:getModData()["waterbarrel"] = nil
+		end
+		-- sanity check + compatibility with waterMax stored in IsoGridSquare modData
+		if not barrel.waterMax then
+			local spriteName = nil
+			if barrelObject:getSprite() then spriteName = barrelObject:getSprite():getName() end
+			if spriteName == "carpentry_02_54" or spriteName == "carpentry_02_55" then
+				barrel.waterMax = 40
+			elseif spriteName == "carpentry_02_52" or spriteName == "carpentry_02_53" then
+				barrel.waterMax = 100
+			else
+				barrelObject:setSprite("carpentry_02_54")
+				barrel.waterMax = 40
+			end
+			barrelObject:getModData()["waterMax"] = barrel.waterMax;
+			barrelObject:transmitModData();
+		end
+		table.insert(RainCollectorBarrel.barrels, barrel);
+		table.insert(RainCollectorBarrel.modData.rcbarrel.barrels, barrel);
+		noise("new barrel created " .. barrel.x .. "," .. barrel.y .. " with " .. barrel.waterAmount .. " water");
+	else
+		noise("found existed barrel " .. barrel.x .. "," .. barrel.y .. " with " .. barrel.waterAmount);
+
+		-- compatibility stuff
+		if not barrel.fertilizerLvl then
+			barrel.fertilizerLvl = 0
+			RainCollectorBarrel.saveData(barrel);
+		end
+		if not barrel.decimalPart then
+			barrel.decimalPart = 0
+			RainCollectorBarrel.saveData(barrel);
+		end
+
+		barrelObject:getModData()["fertilizerLvl"] = barrel.fertilizerLvl;
+		barrelObject:getModData()["decimalPart"] = barrel.decimalPart;
+
+		barrelObject:setWaterAmount(barrel.waterAmount);
+
+		barrelObject:transmitModData();
+	end
+
+	RainCollectorBarrel.changeSprite(barrel, barrelObject);
+end
+
+function RainCollectorBarrel.changeSprite(barrel, barrelObject)
+	local spriteName = nil
+	if barrel.waterMax == 40 then
+		if barrel.waterAmount >= 30 then
+			spriteName = "carpentry_02_55"
+		else
+			spriteName = "carpentry_02_54"
+		end
+	elseif barrel.waterMax == 100 then
+		if barrel.waterAmount >= 75 then
+			spriteName = "carpentry_02_53"
+		else
+			spriteName = "carpentry_02_52"
+		end
+	end
+	if spriteName and (not barrelObject:getSprite() or spriteName ~= barrelObject:getSprite():getName()) then
+		noise('sprite changed to '..spriteName..' at '..barrel.x..','..barrel.y..','..barrel.z)
+		barrelObject:setSprite(spriteName)
+		barrelObject:transmitUpdatedSpriteToClients()
+	end
+end
+
+RainCollectorBarrel.OnWaterAmountChange = function(object, prevAmount)
+	if isClient() then return end
+	if not object then return end
+	for iB,vB in ipairs(RainCollectorBarrel.barrels) do
+		if vB.x == object:getX() and vB.y == object:getY() and vB.z == object:getZ() then
+			noise('waterAmount changed to '..object:getWaterAmount()..' at '..vB.x..','..vB.y..','..vB.z)
+			vB.waterAmount = object:getWaterAmount()
+			RainCollectorBarrel.changeSprite(vB, object)
+			RainCollectorBarrel.saveData(vB);
+			break
+		end
+	end
+end
+
+RainCollectorBarrel.OnClientCommand = function(module, command, player, args)
+	if module ~= 'object' then
+		return
+	end
+	-- This takeWater command works for *any* object that the player takes
+	-- water from, including sinks and rain barrels.
+	if command == 'takeWater' then
+		local gs = getCell():getGridSquare(args.x, args.y, args.z)
+		if gs then
+			for i=0,gs:getObjects():size()-1 do
+				local obj = gs:getObjects():get(i)
+				if obj:useWater(args.units) > 0 then
+					obj:transmitModData()
+					break
+				end
+			end
+		end
+	end
+end
+
+-- Called when the client adds an object to the map (which it shouldn't be able to)
+RainCollectorBarrel.OnObjectAdded = function(object)
+	if isClient() then return end
+	if RainCollectorBarrel.isRainCollectorBarrelObject(object) then
+		RainCollectorBarrel.loadRainBarrel(object)
+	end
+end
+
+
+function RainCollectorBarrel.saveData(barrel)
+	-- local exist = false
+
+	for i=1, #RainCollectorBarrel.modData.rcbarrel.barrels do
+		local data = RainCollectorBarrel.modData.rcbarrel.barrels[i]
+
+		if barrel.x == data.x and barrel.y == data.y and barrel.z == data.z then
+			for key, val in pairs(barrel) do
+				RainCollectorBarrel.modData.rcbarrel.barrels[i][key] = val;
+				-- RainCollectorBarrel.modData.rcbarrel.barrels[i].key = val;
+			end
+			-- exist = true
+			break
+		end
+	end
+
+	-- if not exist then
+	-- table.insert(RainCollectorBarrel.modData.rcbarrel.barrels, barrel)
+	-- end
+end
+
+function RainCollectorBarrel.convertOldModData()
+	if RainCollectorBarrel.modData.rcbarrel and RainCollectorBarrel.modData.rcbarrel.barrels then return end
+	RainCollectorBarrel.modData.rcbarrel = {}
+	RainCollectorBarrel.modData.rcbarrel.barrels = {}
+end
+
+function RainCollectorBarrel.loadBarrels()
+	if isClient() then return; end
+	if getCore():isDedicated() then return; end
+
+	RainCollectorBarrel.modData = GameTime:getInstance():getModData();
+
+	-- convert old barrels
+	RainCollectorBarrel.convertOldModData()
+
+	if #RainCollectorBarrel.barrels ~= 0 then noise("function loadBarrels : SOMETHING IS WRONG") return end
+
+	RainCollectorBarrel.barrels = {}
+
+	for i=1, #RainCollectorBarrel.modData.rcbarrel.barrels do
+		-- noise("loading barrel from gameTime modData");
+		table.insert(RainCollectorBarrel.barrels, RainCollectorBarrel.modData.rcbarrel.barrels[i])
+	end
+
+	noise(#RainCollectorBarrel.modData.rcbarrel.barrels .. " loaded");
+end
+-- load all barrels in world from the start of the game
+Events.OnGameStart.Add(RainCollectorBarrel.loadBarrels);
+Events.OnGameTimeLoaded.Add(RainCollectorBarrel.loadBarrels);
+Events.OnGameBoot.Add(RainCollectorBarrel.loadBarrels);
+
+-- properly remove the barrel from the world
+function RainCollectorBarrel.OnDestroyIsoThumpable(thump, player)
+	if isClient() then return end
+		if not thump:getSquare() or not RainCollectorBarrel.isRainCollectorBarrelObject(thump) then
+			return
+		end
+		local sq = thump:getSquare()
+		if not sq then return end
+			for iB,vB in ipairs(RainCollectorBarrel.barrels) do
+			if vB.x == sq:getX() and vB.y == sq:getY() and vB.z == sq:getZ() then
+				noise('destroyed at '..vB.x..','..vB.y..','..vB.z)
+				table.remove(RainCollectorBarrel.barrels, iB)
+				break
+			end
+			for iB,vB in ipairs(RainCollectorBarrel.modData.rcbarrel.barrels) do
+			if vB.x == sq:getX() and vB.y == sq:getY() and vB.z == sq:getZ() then
+				noise('destroyed at '..vB.x..','..vB.y..','..vB.z)
+				table.remove(RainCollectorBarrel.modData.rcbarrel.barrels, iB)
+				break
+			end
+		end
+	end
+end
+
+-- every 10 minutes we check if it's raining, to fill our water barrel
+Events.EveryTenMinutes.Add(RainCollectorBarrel.checkRain);
+
+-- when we load a gridsquare we check if there's any rain barrel on it, to add it on our map (so we can update the rain)
+Events.LoadGridsquare.Add(RainCollectorBarrel.LoadGridsquare);
+
+Events.OnWaterAmountChange.Add(RainCollectorBarrel.OnWaterAmountChange)
+Events.OnClientCommand.Add(RainCollectorBarrel.OnClientCommand)
+Events.OnObjectAdded.Add(RainCollectorBarrel.OnObjectAdded)
+Events.OnDestroyIsoThumpable.Add(RainCollectorBarrel.OnDestroyIsoThumpable);
+

@@ -1,0 +1,3 @@
+Items_FR = {
+	DisplayName_Irrigation_Pipe = "Tuyau d'irrigation",
+	}

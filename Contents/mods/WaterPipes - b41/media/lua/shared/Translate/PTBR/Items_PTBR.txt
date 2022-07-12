@@ -1,0 +1,3 @@
+Items_ES = {
+	DisplayName_Irrigation_Pipe = "Tubo de irrigação",
+	}

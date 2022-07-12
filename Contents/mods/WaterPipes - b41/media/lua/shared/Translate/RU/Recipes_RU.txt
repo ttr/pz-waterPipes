@@ -1,0 +1,4 @@
+Recipe_RU = {
+	Recipe_Make_Fertilizer = "Сделать Удобрение",
+	Recipe_Make_Irrigation_Pipe = "Сделать Ирригационную Трубу",
+}

@@ -1,0 +1,3 @@
+Items_RU = {
+	DisplayName_Irrigation_Pipe = "Ирригационная труба",
+	}

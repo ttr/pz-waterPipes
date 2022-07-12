@@ -1,0 +1,4 @@
+Recipe_DE = {
+	Recipe_Make_Fertilizer = "Dünger herstellen",
+	Recipe_Make_Irrigation_Pipe = "Bewässerungsrohr herstellen",
+}

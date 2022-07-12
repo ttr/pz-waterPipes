@@ -1,0 +1,11 @@
+IGUI_IT = {
+	-- All the UI text used in game
+	-- InventoryPane
+	IGUI_WaterPipe_WaterAmount = "Quantità d'acqua nella botte = %1",
+	IGUI_WaterPipe_FertilizerAmount = "Livello di fertilizzazione = %1",
+	IGUI_WaterPipe_BarrelInfo = "Informazioni sul barile",
+	IGUI_WaterPipe_NoMorePipe = "Tubi finiti",
+	IGUI_WaterPipe_EnoughPipeBack = "Riprendo abbastanza tubi",
+	IGUI_WaterPipe_RecoverPipeProgress = "Mi viene restituito 1 tubo, ancora %1 prima di riaverli tutti",
+}
+

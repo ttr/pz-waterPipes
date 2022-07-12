@@ -1,0 +1,8 @@
+IGUI_RU = {
+	IGUI_WaterPipe_WaterAmount = "Количество Воды в Бочке = %1",
+	IGUI_WaterPipe_FertilizerAmount = "Уровень Удобрений = %1",
+	IGUI_WaterPipe_BarrelInfo = "Информация о Бочке",
+	IGUI_WaterPipe_NoMorePipe = "Не Нужно Больше Труб",
+	IGUI_WaterPipe_EnoughPipeBack = "У взял достаточно труб",
+	IGUI_WaterPipe_RecoverPipeProgress = "Я получил одну трубу назад, %1 more before I get the whole back",
+}

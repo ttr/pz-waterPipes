@@ -1,0 +1,3 @@
+Items_DE = {
+	DisplayName_Irrigation_Pipe = "Bewässerungsrohr",
+	}

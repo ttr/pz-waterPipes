@@ -1,0 +1,11 @@
+IGUI_ES = {
+	-- All the UI text used in game
+	-- InventoryPane
+	IGUI_WaterPipe_WaterAmount = "Cantidad de agua en el barril = %1",
+	IGUI_WaterPipe_FertilizerAmount = "Nivel de fertilizante en el barril = %1",
+	IGUI_WaterPipe_BarrelInfo = "Info del barril",
+	IGUI_WaterPipe_NoMorePipe = "No hay más tuberia",
+	IGUI_WaterPipe_EnoughPipeBack = "Recuperé suficientes tuberias",
+	IGUI_WaterPipe_RecoverPipeProgress = "Recuperé una tuberia, %1 mas para tener una completa",
+}
+
