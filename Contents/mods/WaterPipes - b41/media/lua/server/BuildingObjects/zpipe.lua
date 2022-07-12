@@ -168,34 +168,48 @@ end
 ----------------------
 
 ---
--- When pipe is removed
+-- When pipe is removed / destroyed
 --
+function Pipe.pipeRemoveTile(pipeObject)
+
+	square:transmitRemoveItemFromSquare(pipeObject);
+	square:RemoveTileObject(pipeObject);
+	square:DeleteTileObject(pipeObject);
+
+	for i=1, #WaterPipe.pipes do
+		if WaterPipe.pipes[i].x == pipe.x and
+			WaterPipe.pipes[i].y == pipe.y and
+			WaterPipe.pipes[i].z == pipe.z then
+			table.remove(WaterPipe.pipes, i)
+			break
+		end
+	end
+	for i=1, #WaterPipe.modData.waterPipes.pipes do
+		if WaterPipe.modData.waterPipes.pipes[i].x == pipe.x and
+			WaterPipe.modData.waterPipes.pipes[i].y == pipe.y and
+			WaterPipe.modData.waterPipes.pipes[i].z == pipe.z then
+			table.remove(WaterPipe.modData.waterPipes.pipes, i)
+			break
+		end
+	end
+end
+
+-- not used (future for destroyin with sledge)
+function Pipe.onPipeDestroy(pipe)
+	local square = getWorld():getCell():getGridSquare(pipe.x, pipe.y, pipe.z);
+	local pipeObject = WaterPipe.findPipeObject(square)
+	if square and pipeObject ~= nil then
+		Pipe.pipeRemoveTile(pipeObject)
+	end
+end
+
 function Pipe.onPickUp(pipe, player)
 	local square = getWorld():getCell():getGridSquare(pipe.x, pipe.y, pipe.z);
 	local pipeObject = WaterPipe.findPipeObject(square)
 
 	if square and pipeObject ~= nil then
-		square:transmitRemoveItemFromSquare(pipeObject);
-		square:RemoveTileObject(pipeObject);
-		square:DeleteTileObject(pipeObject);
-
-		for i=1, #WaterPipe.pipes do
-			if WaterPipe.pipes[i].x == pipe.x and 
-				WaterPipe.pipes[i].y == pipe.y and 
-				WaterPipe.pipes[i].z == pipe.z then
-				table.remove(WaterPipe.pipes, i)
-				break
-			end
-		end
-		for i=1, #WaterPipe.modData.waterPipes.pipes do
-			if WaterPipe.modData.waterPipes.pipes[i].x == pipe.x and 
-				WaterPipe.modData.waterPipes.pipes[i].y == pipe.y and 
-				WaterPipe.modData.waterPipes.pipes[i].z == pipe.z then
-				table.remove(WaterPipe.modData.waterPipes.pipes, i)
-				break
-			end
-		end
-
+		Pipe.pipeRemoveTile(pipeObject)
+		
 		-- with player modData : reset when after re login on server
 		-- so when player dies, we don't have useless stuff that remain
 		-- if player:getModData()["removedWaterPipes"] then

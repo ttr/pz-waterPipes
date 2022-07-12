@@ -255,7 +255,7 @@ function WaterPipe.updateBarrel(b, waterPerCluster, waterNeededPerCluster, barre
 		b.waterAmount = 0;
 	elseif waterPerCluster >= waterNeededPerCluster or fillBarrels then
 		local decimalPart = 0;
-		local newLevel = 0;		
+		local newLevel = 0;
 				
 		if fillBarrels then
 			-- we just level the barrels here, we have infinite water
@@ -384,7 +384,7 @@ function WaterPipe.getTypeIdx(pipeType)
 end
 
 -- only pipeTypeIdxB can be 12 (a barrel), not pipeTypeIdxA
-function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB)
+function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 	-- pos of A compared to B
 	local square_pos;
 	
@@ -402,7 +402,23 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB)
 		square_pos = 4;
 	-- same pos (should never happen)
 	else
-		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE !");
+		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: " .. pipeTypeIdxA .. " " .. pipeTypeIdxB .. " " .. xA .. " " .. yA .. " " .. xB .. " " .. yB .. " " .. z);
+		if pipeTypeIdxA == 12 then -- A is barrel, delete B
+			local square = getWorld():getCell():getGridSquare(xB, yB, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   Pipe.pipeRemoveTile(pipeObject)
+			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted " .. pipeTypeIdxB ..  " " .. xB .. " " .. yB .. " " .. z);
+			end
+		elseif pipeTypeIdxB == 12 then  -- B is barrel, delete A
+			local square = getWorld():getCell():getGridSquare(xA, yA, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   Pipe.pipeRemoveTile(pipeObject)
+			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted " .. pipeTypeIdxA ..  " " .. xA .. " " .. yA .. " " .. z);
+			end
+
+		
 	end
 	
 	
@@ -459,14 +475,14 @@ function WaterPipe.buildAdjMatrix(mat)
 		for id2, apipe2 in ipairs(WaterPipe.pipes) do
 			-- that way, areConnected is called 2 times less
 			if id < id2 then
+			    local zB = apipe2.z;
 				local xB = apipe2.x;
 				local yB = apipe2.y;
-				local zB = apipe2.z;
-				
+
 				if math.abs(xA-xB)+math.abs(yA-yB) <= 1.1 and zA == zB then
 					local idx2 = WaterPipe.getTypeIdx(apipe2.pipeType);
-					
-					if WaterPipe.areConnected(idx, idx2, xA, yA, xB, yB) then				
+
+					if WaterPipe.areConnected(idx, idx2, xA, yA, xB, yB, zA) then
 						table.insert(vect, id2);
 						-- print("pipe " .. id2 .. " at " .. xB .. ", " .. yB);
 					end
@@ -476,7 +492,7 @@ function WaterPipe.buildAdjMatrix(mat)
 		
 		table.insert(mat, vect);
 	end
-	
+
 	-- fill missing elements
 	-- needed for quicker accessES later
 	for id, apipe in ipairs(WaterPipe.pipes) do
@@ -555,7 +571,7 @@ function WaterPipe.buildWaterSources(cbarrels)
 			if math.abs(xA-v.x)+math.abs(yA-v.y) <= 1.1 and zA == v.z then
 				local idx2 = WaterPipe.getTypeIdx("barrel");
 				
-				if WaterPipe.areConnected(idx, idx2, xA, yA, v.x, v.y) then
+				if WaterPipe.areConnected(idx, idx2, xA, yA, v.x, v.y, zA) then
 					table.insert(sources, v);
 				end
 			end
