@@ -417,8 +417,7 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 			   Pipe.pipeRemoveTile(pipeObject)
 			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted " .. pipeTypeIdxA ..  " " .. xA .. " " .. yA .. " " .. z);
 			end
-
-		
+		end
 	end
 	
 	
