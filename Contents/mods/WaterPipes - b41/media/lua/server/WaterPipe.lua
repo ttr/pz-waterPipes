@@ -723,9 +723,9 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 						else
 							waterNeeded = plant.waterNeeded;
 						end
-						
+						-- max water up is 30 plant units -- penalty for automation
 						waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), 30);
-						print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
+						-- print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
 
 						if waterNeeded > 0 then
 							if waterPerCluster[k] < waterNeeded then
@@ -733,7 +733,8 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 								break;
 							end
 							plant.waterLvl = plant.waterLvl + waterNeeded ;
-							waterPerCluster[k] = waterPerCluster[k] - waterNeeded;
+							-- barrel units to plant units ratio is 5, we will use 4 to make some penalty for automaiton
+							waterPerCluster[k] = waterPerCluster[k] - (waterNeeded / 4);
 							local farmsystem = SFarmingSystem.instance;
 							plant.lastWaterHour = farmsystem.hoursElapsed;
 							plant:saveData();
