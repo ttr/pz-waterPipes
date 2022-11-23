@@ -645,22 +645,8 @@ end
 
 
 ----
-function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource)
+function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource)
 	for kk, vv in pairs(clusters) do
-		for id, apipe in ipairs(WaterPipe.pipes) do
-			if kk[id] == 'ok' then
-				if waterNeededPerCluster[kk] then
-					-- 0.1 per plant so * 10 to get amount back
-					waterNeededPerCluster[kk] = waterNeededPerCluster[kk] + ( (1.0 * #planting[id]) / 10.0 );
-				else
-					waterNeededPerCluster[kk] = ( (1.0 * #planting[id]) / 10.0 );
-				end
-				
-				if apipe.infinite == "true" then
-					infiniteClusterSource[kk] = "true";
-				end
-			end
-		end
 		for _, barrel in ipairs(vv) do			
 			
 			waterAmount = barrel.waterAmount;
@@ -703,7 +689,6 @@ function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, w
 				elseif playerBarrel then
 					fertilizerPerCluster[kk] = barrel.fertilizerLvl;
 				end
-			
 			end
 		end
 		
@@ -721,115 +706,49 @@ function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, w
 end
 
 
-function WaterPipe.waterPlants(clusters, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource)
+function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource)
 	-- test if there is enough water for each cluster
 	for k, v in pairs(clusters) do
-		-- each barrel contribute proportionally to cluster capacity
-		-- that way they should all average to a close level
-		-- which makes an optimal refill when raining
-		if waterPerCluster[k] >= waterNeededPerCluster[k] or infiniteClusterSource[k] == "true" then
-			-- go through the water barrels
-			local barrelsNb = #v;
-			local fertilizer = false;
-			
-			-- because plants need 0.1
-			if fertilizerPerCluster[k] >= (waterNeededPerCluster[k]*10) then
-				fertilizer = true;
-			end
-			
-			local fillBarrels = false;
-			if infiniteClusterSource[k] == "true" then
-				fillBarrels = true;
-			end
-						
-			local max40 = false;
-			
-			local fertilizer_val = 0;
-			if fertilizer then
-				fertilizer_val = waterNeededPerCluster[k]*10; -- because plants need 0.1
-			end			
-			
-			for _, barrel in ipairs(v) do
-				local ret = nil;
-				ret, fertilizer_val = WaterPipe.updateBarrel(barrel, waterPerCluster[k], waterNeededPerCluster[k], barrelsNb, fertilizer_val, fillBarrels);
-				if ret then
-					max40 = true;
-				end
-			end
-			
-			if max40 then
-				for _, barrel in ipairs(v) do
-					WaterPipe.updateBarrel(barrel, -2, 0, barrelsNb, 0, false);
-				end
-			end
-			
-			-- go through our plantings
+		if waterPerCluster[k] > 0 or infiniteClusterSource[k] == "true" then
+
+			local stop = false;
+			local waterNeeded = 0;
 			for id, apipe in ipairs(WaterPipe.pipes) do
 				if k[id] == 'ok' then
 					for _, plant in ipairs(planting[id]) do
-						plant.waterLvl = plant.waterLvl + 1;
 						
-						if plant.waterLvl > 100 then
-							plant.waterLvl = 100;
-						end
-						local farmsystem = SFarmingSystem.instance
-						plant.lastWaterHour = farmsystem.hoursElapsed
-						
-						-- for debug, plant grow every 2 hours
-						-- if plant.nbOfGrow <= 7 then
-							-- growPlant(plant, basicFarming.playerData["planting:" .. plant.id .. ":nextGrowing"], false);
-						-- end
-						
-						if fertilizer and plant.state ~= "plow" and plant:isAlive() then
-							if plant.fertilizer < 4  then
-								plant.fertilizer = plant.fertilizer + 1;
-								plant.nextGrowing = plant.nextGrowing - 20;
-								if plant.nextGrowing < 1 then
-									plant.nextGrowing = 1;
-								end
-							else -- too much fertilizer and our plant die !
-								plant:rottenThis();
-							end
+						-- HC chnages min/max water levels per plant, so we will need to use those and we will keep in middle of those.
+						if getActivatedMods():contains("Hydrocraft") and farming_vegetableconf then
+							waterNeeded = (farming_vegetableconf.props[plant.typeOfSeed].waterLvlMax + farming_vegetableconf.props[plant.typeOfSeed].waterLvl) / 2;
+						else
+							waterNeeded = plant.waterNeeded;
 						end
 						
-						plant:saveData()
-					end
-				end
-			end
-		elseif waterPerCluster[k] > 0 then
-			-- easy cheat, otherwise compute distances in graph with weight on sources and find the flow, 
-			-- i.e. which pipes get water and which don't
-			-- here we proceed by id : older pipes get water first
-			-- while waterPerCluster[k] > 0 do
-				local stop = false;
-				for id, apipe in ipairs(WaterPipe.pipes) do
-					if k[id] == 'ok' then
-						for _, plant in ipairs(planting[id]) do
-							if waterPerCluster[k] == 0 then
+						waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), 30);
+						print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
+
+						if waterNeeded > 0 then
+							if waterPerCluster[k] < waterNeeded then
 								stop = true;
 								break;
 							end
-							plant.waterLvl = plant.waterLvl + 1;
-							waterPerCluster[k] = waterPerCluster[k] - 1;
-							if plant.waterLvl > 100 then
-								plant.waterLvl = 100;
-							end
-							local farmsystem = SFarmingSystem.instance
-							plant.lastWaterHour = farmsystem.hoursElapsed
-							plant.saveData()
-						end
-						
-						if stop then
-							break;
+							plant.waterLvl = plant.waterLvl + waterNeeded ;
+							waterPerCluster[k] = waterPerCluster[k] - waterNeeded;
+							local farmsystem = SFarmingSystem.instance;
+							plant.lastWaterHour = farmsystem.hoursElapsed;
+							plant:saveData();
 						end
 					end
+					if stop then
+						break;
+					end
 				end
-			--end
+			end
 			
-			-- update barrels (no water left)
+			-- update barrels
 			local barrelsNb = #v;
 			for _, barrel in ipairs(v) do
-				WaterPipe.updateBarrel(barrel, -1, 0, barrelsNb, 0, false);
+				WaterPipe.updateBarrel(barrel, waterPerCluster[k], 0, barrelsNb, fertilizerPerCluster[k], false);
 			end
 		end
 	end
@@ -918,7 +837,7 @@ function WaterPipe.updatePipes()
 	local sec = math.floor(getGameTime():getTimeOfDay() * 3600);
 	local currentHour = math.floor(sec / 3600);
 	
-	local doWater = true;
+	local doWater = false;
 	
 	if currentHour ~= WaterPipe.previousHour then
 		WaterPipe.previousHour = currentHour;
@@ -936,18 +855,10 @@ function WaterPipe.updatePipes()
 
 		if WaterPipe.hourElapsedForWater >= hourForWater then
 			WaterPipe.hourElapsedForWater = 0;
-			print("watering plants")
+			doWater = true;
+			-- print("watering plants")
 
-			-- if RainManager.isRaining() then
-				-- print("It's raining, no water in pipes");
-				-- return;
-				-- doWater = false;
-			-- end
-		else
-			doWater = false;
 		end
-	else
-		doWater = false;
 	end
 		
 	-- print("debug rain collector barrel code : all collector barrels waterLvl");
@@ -986,8 +897,7 @@ function WaterPipe.updatePipes()
 
 	WaterPipe.lock = true;
 	
-	if WaterPipe.modData.waterPipes["check_infinite"] then
-	else
+	if WaterPipe.modData.waterPipes["check_infinite"] == nil then
 		WaterPipe.modData.waterPipes["check_infinite"] = "true";
 	end
 	
@@ -1026,7 +936,6 @@ function WaterPipe.updatePipes()
 	
 	local planting = {};
 	local waterPerCluster = {};
-	local waterNeededPerCluster = {};
 	local fertilizerPerCluster = {};
 	
 	
@@ -1042,17 +951,18 @@ function WaterPipe.updatePipes()
 		-- water needed for each cluster
 		-- water available for each cluster
 		-- if there's enough it's gonna be easy, otherwise we have an optimal flow problem for each cluster ...
-		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		-- from ttr - nope - max water was removed - system is now dummed down and plants go FIFO
+		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 		
 		-- water plants of each cluster
-		WaterPipe.waterPlants(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		WaterPipe.waterPlants(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 	else
 		-- for water average	
 		for id, apipe in ipairs(WaterPipe.pipes) do
 			table.insert(planting, {});
 		end
 
-		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 		
 		for k, v in pairs(clustersF) do
 			local fillBarrels = false;

@@ -39,7 +39,7 @@ function RainCollectorBarrel:create(x, y, z, north, sprite)
 		barrel.decimalPart = 0
 
 	else
-		print("RainCollectorBarrel:create: No barrel found at "..square:getX().."x"..square:getY().."x"..square:getZ().."!");
+		-- print("RainCollectorBarrel:create: No barrel found at "..square:getX().."x"..square:getY().."x"..square:getZ().."!");
 	end
 end
 

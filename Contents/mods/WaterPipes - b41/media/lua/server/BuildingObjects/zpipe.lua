@@ -237,16 +237,16 @@ function Pipe.onPickUp(pipe, player)
 				else
 					player:getInventory():AddItem("waterPipes.WaterPipe");
 				end
-				player:Say(getText("IGUI_WaterPipe_EnoughPipeBack"));
+				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_EnoughPipeBack"), HaloTextHelper.getColorGreen());
 				WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 0;
 			else
 				local delta = 10 - WaterPipe.modData.waterPipes.player["removedWaterPipes"];
-				player:Say(getText("IGUI_WaterPipe_RecoverPipeProgress", delta));
+				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", delta), HaloTextHelper.getColorGreen());
 			end
 		else
 			WaterPipe.modData.waterPipes.player = {}
 			WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 1;
-			player:Say(getText("IGUI_WaterPipe_RecoverPipeProgress", 9));
+			HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", 9), HaloTextHelper.getColorGreen());
 		end
 	end
 end
