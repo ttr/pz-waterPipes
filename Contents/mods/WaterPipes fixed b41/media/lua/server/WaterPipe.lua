@@ -82,7 +82,7 @@ function WaterPipe.loadPipes()
 		table.insert(WaterPipe.pipes, WaterPipe.modData.waterPipes.pipes[i])
 	end
 	
-	print(#WaterPipe.modData.waterPipes.pipes .. " loaded");
+	print("WaterPipes: " .. #WaterPipe.modData.waterPipes.pipes .. " loaded");
 end
 
 Events.OnGameStart.Add(WaterPipe.loadPipes);
@@ -255,7 +255,7 @@ function WaterPipe.updateBarrel(b, waterPerCluster, waterNeededPerCluster, barre
 		b.waterAmount = 0;
 	elseif waterPerCluster >= waterNeededPerCluster or fillBarrels then
 		local decimalPart = 0;
-		local newLevel = 0;		
+		local newLevel = 0;
 				
 		if fillBarrels then
 			-- we just level the barrels here, we have infinite water
@@ -384,7 +384,7 @@ function WaterPipe.getTypeIdx(pipeType)
 end
 
 -- only pipeTypeIdxB can be 12 (a barrel), not pipeTypeIdxA
-function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB)
+function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 	-- pos of A compared to B
 	local square_pos;
 	
@@ -402,10 +402,39 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB)
 		square_pos = 4;
 	-- same pos (should never happen)
 	else
-		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE !");
+
+		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: " .. pipeTypeIdxA .. " " .. pipeTypeIdxB .. " " .. xA .. " " .. yA .. " " .. xB .. " " .. yB .. " " .. z);
+		if pipeTypeIdxA == 12 then -- A is barrel, delete B
+			local square = getWorld():getCell():getGridSquare(xB, yB, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   print("sprite found - deleting fingle object");
+			   Pipe.pipeRemoveTile(pipeObject);
+			else
+				print("sprite not found, detelint all references in pipe network - might take a while");
+				Pipe.pipeRemove(xB, yB, z, false);
+			end
+		elseif pipeTypeIdxB == 12 then  -- B is barrel, delete A
+			local square = getWorld():getCell():getGridSquare(xA, yA, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   print("sprite found - deleting fingle object");
+			   Pipe.pipeRemoveTile(pipeObject);
+			else
+				print("sprite not found, detelint all references in pipe network - might take a while");
+				Pipe.pipeRemove(xA, yA, z, false);
+			end
+		else --both elemts are pipes / delete both
+			local square = getWorld():getCell():getGridSquare(xA, yA, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted both " .. xA .. " " .. yA .. " " .. z);
+			   Pipe.pipeRemoveTile(pipeObject);
+			   Pipe.pipeRemove(xA, yA, z, false);
+			end
+		end
 	end
-	
-	
+
 	if square_pos == 1 then
 		-- print(pipeTypeIdxA .. " north of " .. pipeTypeIdxB);
 		if ( pipeTypeIdxA == 1 or pipeTypeIdxA == 3 or pipeTypeIdxA == 4 or pipeTypeIdxA == 5 or pipeTypeIdxA == 9 or pipeTypeIdxA == 10 or pipeTypeIdxA == 11 ) and ( pipeTypeIdxB == 1 or pipeTypeIdxB == 3 or pipeTypeIdxB == 6 or pipeTypeIdxB == 7 or pipeTypeIdxB == 8 or pipeTypeIdxB == 10 or pipeTypeIdxB == 11 or pipeTypeIdxB == 12 ) then
@@ -459,14 +488,14 @@ function WaterPipe.buildAdjMatrix(mat)
 		for id2, apipe2 in ipairs(WaterPipe.pipes) do
 			-- that way, areConnected is called 2 times less
 			if id < id2 then
+			    local zB = apipe2.z;
 				local xB = apipe2.x;
 				local yB = apipe2.y;
-				local zB = apipe2.z;
-				
+
 				if math.abs(xA-xB)+math.abs(yA-yB) <= 1.1 and zA == zB then
 					local idx2 = WaterPipe.getTypeIdx(apipe2.pipeType);
-					
-					if WaterPipe.areConnected(idx, idx2, xA, yA, xB, yB) then				
+
+					if WaterPipe.areConnected(idx, idx2, xA, yA, xB, yB, zA) then
 						table.insert(vect, id2);
 						-- print("pipe " .. id2 .. " at " .. xB .. ", " .. yB);
 					end
@@ -476,7 +505,7 @@ function WaterPipe.buildAdjMatrix(mat)
 		
 		table.insert(mat, vect);
 	end
-	
+
 	-- fill missing elements
 	-- needed for quicker accessES later
 	for id, apipe in ipairs(WaterPipe.pipes) do
@@ -555,7 +584,7 @@ function WaterPipe.buildWaterSources(cbarrels)
 			if math.abs(xA-v.x)+math.abs(yA-v.y) <= 1.1 and zA == v.z then
 				local idx2 = WaterPipe.getTypeIdx("barrel");
 				
-				if WaterPipe.areConnected(idx, idx2, xA, yA, v.x, v.y) then
+				if WaterPipe.areConnected(idx, idx2, xA, yA, v.x, v.y, zA) then
 					table.insert(sources, v);
 				end
 			end
@@ -630,22 +659,8 @@ end
 
 
 ----
-function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource)
+function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource)
 	for kk, vv in pairs(clusters) do
-		for id, apipe in ipairs(WaterPipe.pipes) do
-			if kk[id] == 'ok' then
-				if waterNeededPerCluster[kk] then
-					-- 0.1 per plant so * 10 to get amount back
-					waterNeededPerCluster[kk] = waterNeededPerCluster[kk] + ( (1.0 * #planting[id]) / 10.0 );
-				else
-					waterNeededPerCluster[kk] = ( (1.0 * #planting[id]) / 10.0 );
-				end
-				
-				if apipe.infinite == "true" then
-					infiniteClusterSource[kk] = "true";
-				end
-			end
-		end
 		for _, barrel in ipairs(vv) do			
 			
 			waterAmount = barrel.waterAmount;
@@ -688,7 +703,6 @@ function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, w
 				elseif playerBarrel then
 					fertilizerPerCluster[kk] = barrel.fertilizerLvl;
 				end
-			
 			end
 		end
 		
@@ -706,115 +720,50 @@ function WaterPipe.buildClusterWaterNeeds(clusters, planting, waterPerCluster, w
 end
 
 
-function WaterPipe.waterPlants(clusters, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource)
+function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource)
 	-- test if there is enough water for each cluster
 	for k, v in pairs(clusters) do
-		-- each barrel contribute proportionally to cluster capacity
-		-- that way they should all average to a close level
-		-- which makes an optimal refill when raining
-		if waterPerCluster[k] >= waterNeededPerCluster[k] or infiniteClusterSource[k] == "true" then
-			-- go through the water barrels
-			local barrelsNb = #v;
-			local fertilizer = false;
-			
-			-- because plants need 0.1
-			if fertilizerPerCluster[k] >= (waterNeededPerCluster[k]*10) then
-				fertilizer = true;
-			end
-			
-			local fillBarrels = false;
-			if infiniteClusterSource[k] == "true" then
-				fillBarrels = true;
-			end
-						
-			local max40 = false;
-			
-			local fertilizer_val = 0;
-			if fertilizer then
-				fertilizer_val = waterNeededPerCluster[k]*10; -- because plants need 0.1
-			end			
-			
-			for _, barrel in ipairs(v) do
-				local ret = nil;
-				ret, fertilizer_val = WaterPipe.updateBarrel(barrel, waterPerCluster[k], waterNeededPerCluster[k], barrelsNb, fertilizer_val, fillBarrels);
-				if ret then
-					max40 = true;
-				end
-			end
-			
-			if max40 then
-				for _, barrel in ipairs(v) do
-					WaterPipe.updateBarrel(barrel, -2, 0, barrelsNb, 0, false);
-				end
-			end
-			
-			-- go through our plantings
+		if waterPerCluster[k] > 0 or infiniteClusterSource[k] == "true" then
+
+			local stop = false;
+			local waterNeeded = 0;
 			for id, apipe in ipairs(WaterPipe.pipes) do
 				if k[id] == 'ok' then
 					for _, plant in ipairs(planting[id]) do
-						plant.waterLvl = plant.waterLvl + 1;
 						
-						if plant.waterLvl > 100 then
-							plant.waterLvl = 100;
+						-- HC chnages min/max water levels per plant, so we will need to use those and we will keep in middle of those.
+						if getActivatedMods():contains("Hydrocraft") and farming_vegetableconf then
+							waterNeeded = (farming_vegetableconf.props[plant.typeOfSeed].waterLvlMax + farming_vegetableconf.props[plant.typeOfSeed].waterLvl) / 2;
+						else
+							waterNeeded = plant.waterNeeded;
 						end
-						local farmsystem = SFarmingSystem.instance
-						plant.lastWaterHour = farmsystem.hoursElapsed
-						
-						-- for debug, plant grow every 2 hours
-						-- if plant.nbOfGrow <= 7 then
-							-- growPlant(plant, basicFarming.playerData["planting:" .. plant.id .. ":nextGrowing"], false);
-						-- end
-						
-						if fertilizer and plant.state ~= "plow" and plant:isAlive() then
-							if plant.fertilizer < 4  then
-								plant.fertilizer = plant.fertilizer + 1;
-								plant.nextGrowing = plant.nextGrowing - 20;
-								if plant.nextGrowing < 1 then
-									plant.nextGrowing = 1;
-								end
-							else -- too much fertilizer and our plant die !
-								plant:rottenThis();
-							end
-						end
-						
-						plant:saveData()
-					end
-				end
-			end
-		elseif waterPerCluster[k] > 0 then
-			-- easy cheat, otherwise compute distances in graph with weight on sources and find the flow, 
-			-- i.e. which pipes get water and which don't
-			-- here we proceed by id : older pipes get water first
-			-- while waterPerCluster[k] > 0 do
-				local stop = false;
-				for id, apipe in ipairs(WaterPipe.pipes) do
-					if k[id] == 'ok' then
-						for _, plant in ipairs(planting[id]) do
-							if waterPerCluster[k] == 0 then
+						-- max water up is 30 plant units -- penalty for automation
+						waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), 30);
+						-- print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
+
+						if waterNeeded > 0 then
+							if waterPerCluster[k] < waterNeeded then
 								stop = true;
 								break;
 							end
-							plant.waterLvl = plant.waterLvl + 1;
-							waterPerCluster[k] = waterPerCluster[k] - 1;
-							if plant.waterLvl > 100 then
-								plant.waterLvl = 100;
-							end
-							local farmsystem = SFarmingSystem.instance
-							plant.lastWaterHour = farmsystem.hoursElapsed
-							plant.saveData()
-						end
-						
-						if stop then
-							break;
+							plant.waterLvl = plant.waterLvl + waterNeeded ;
+							-- barrel units to plant units ratio is 5, we will use 4 to make some penalty for automaiton
+							waterPerCluster[k] = waterPerCluster[k] - (waterNeeded / 4);
+							local farmsystem = SFarmingSystem.instance;
+							plant.lastWaterHour = farmsystem.hoursElapsed;
+							plant:saveData();
 						end
 					end
+					if stop then
+						break;
+					end
 				end
-			--end
+			end
 			
-			-- update barrels (no water left)
+			-- update barrels
 			local barrelsNb = #v;
 			for _, barrel in ipairs(v) do
-				WaterPipe.updateBarrel(barrel, -1, 0, barrelsNb, 0, false);
+				WaterPipe.updateBarrel(barrel, waterPerCluster[k], 0, barrelsNb, fertilizerPerCluster[k], false);
 			end
 		end
 	end
@@ -903,7 +852,7 @@ function WaterPipe.updatePipes()
 	local sec = math.floor(getGameTime():getTimeOfDay() * 3600);
 	local currentHour = math.floor(sec / 3600);
 	
-	local doWater = true;
+	local doWater = false;
 	
 	if currentHour ~= WaterPipe.previousHour then
 		WaterPipe.previousHour = currentHour;
@@ -921,18 +870,10 @@ function WaterPipe.updatePipes()
 
 		if WaterPipe.hourElapsedForWater >= hourForWater then
 			WaterPipe.hourElapsedForWater = 0;
-			print("watering plants")
+			doWater = true;
+			-- print("watering plants")
 
-			-- if RainManager.isRaining() then
-				-- print("It's raining, no water in pipes");
-				-- return;
-				-- doWater = false;
-			-- end
-		else
-			doWater = false;
 		end
-	else
-		doWater = false;
 	end
 		
 	-- print("debug rain collector barrel code : all collector barrels waterLvl");
@@ -970,9 +911,8 @@ function WaterPipe.updatePipes()
 	end
 
 	WaterPipe.lock = true;
-	
-	if WaterPipe.modData.waterPipes["check_infinite"] then
-	else
+	print(WaterPipe.modData.waterPipes["check_infinite"]);
+	if not WaterPipe.modData.waterPipes["check_infinite"] then
 		WaterPipe.modData.waterPipes["check_infinite"] = "true";
 	end
 	
@@ -1011,7 +951,6 @@ function WaterPipe.updatePipes()
 	
 	local planting = {};
 	local waterPerCluster = {};
-	local waterNeededPerCluster = {};
 	local fertilizerPerCluster = {};
 	
 	
@@ -1027,17 +966,18 @@ function WaterPipe.updatePipes()
 		-- water needed for each cluster
 		-- water available for each cluster
 		-- if there's enough it's gonna be easy, otherwise we have an optimal flow problem for each cluster ...
-		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		-- from ttr - nope - max water was removed - system is now dummed down and plants go FIFO
+		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 		
 		-- water plants of each cluster
-		WaterPipe.waterPlants(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		WaterPipe.waterPlants(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 	else
 		-- for water average	
 		for id, apipe in ipairs(WaterPipe.pipes) do
 			table.insert(planting, {});
 		end
 
-		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, waterNeededPerCluster, fertilizerPerCluster, infiniteClusterSource);
+		WaterPipe.buildClusterWaterNeeds(clustersF, planting, waterPerCluster, fertilizerPerCluster, infiniteClusterSource);
 		
 		for k, v in pairs(clustersF) do
 			local fillBarrels = false;

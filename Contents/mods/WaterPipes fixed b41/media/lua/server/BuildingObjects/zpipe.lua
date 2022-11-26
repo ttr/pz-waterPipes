@@ -91,29 +91,31 @@ end
 --
 function Pipe:isValid(square, north)
 	local testForPermitted = false;
-	
+	local specialObjectsCount = square:getSpecialObjects():size();
+	local specialObjectsAllowed = 0;
+
 	for i = 0, square:getObjects():size() - 1 do
 		if square:getObjects():get(i):getName() == "WaterPipe" then
 			return false;
 		end
-		if (square:getObjects():get(i):getType() == IsoObjectType.wall) then
-			testForPermitted = true;
-		end
+--		if (square:getObjects():get(i):getType() == IsoObjectType.wall) then
+--			testForPermitted = true;
+--		end
 
 	end
 
 	-- local door = nil;
-	for i = 0, square:getSpecialObjects():size() - 1 do
+	for i = 0, specialObjectsCount - 1 do
 		if (square:getSpecialObjects():get(i):getType() == IsoObjectType.wall) then
-			testForPermitted = true;
+			specialObjectsAllowed = specialObjectsAllowed + 1;
 		end
 	end
 	
-	if testForPermitted then
+	if specialObjectsAllowed >= specialObjectsCount then
 		return true;
     end
 
-	return ( square:getSpecialObjects():size() == 0 );
+	return false;
 end
 
 
@@ -168,34 +170,64 @@ end
 ----------------------
 
 ---
--- When pipe is removed
+-- When pipe is removed / destroyed
 --
+
+-- delete sprite and call removal pipe from network
+function Pipe.pipeRemoveTile(pipeObject)
+	local pipe = pipeObject:getSquare();
+	square:transmitRemoveItemFromSquare(pipeObject);
+	square:RemoveTileObject(pipeObject);
+	square:DeleteTileObject(pipeObject);
+	Pipe.pipeRemove(pipe:getX(), pipe:getY(), pipe:getZ());
+end
+
+-- delete pipe from network
+function Pipe.pipeRemove(x, y , z, breakOnFind)
+	--print('\t', "pipeRemove",x, y, z, breakOnFind);
+	if breakOnFind == nil then
+		breakOnFind = true
+	end
+
+	for i=0, #WaterPipe.pipes do
+		if WaterPipe.pipes[i] and
+			WaterPipe.pipes[i].x == x and
+			WaterPipe.pipes[i].y == y and
+			WaterPipe.pipes[i].z == z then
+				table.remove(WaterPipe.pipes, i)
+				--print('\t', "pipes 1", x, y, z);
+				if breakOnFind then break;end
+		end
+	end
+	for i=0, #WaterPipe.modData.waterPipes.pipes do
+		if WaterPipe.modData.waterPipes.pipes[i] and WaterPipe.modData.waterPipes.pipes[i].x == x and
+			WaterPipe.modData.waterPipes.pipes[i].y == y and
+			WaterPipe.modData.waterPipes.pipes[i].z == z then
+				table.remove(WaterPipe.modData.waterPipes.pipes, i)
+				--print('\t',"pipes 2", x, y, z);
+				if breakOnFind then break;end
+		end
+	end
+end
+
+-- not used (future for destroyin with sledge)
+function Pipe.onPipeDestroy(pipe)
+	local square = getWorld():getCell():getGridSquare(pipe.x, pipe.y, pipe.z);
+	local pipeObject = WaterPipe.findPipeObject(square)
+	if square and pipeObject ~= nil then
+		Pipe.pipeRemoveTile(pipeObject)
+	end
+end
+
+-- pipe pickup
 function Pipe.onPickUp(pipe, player)
+	--print('\t', "Pipe pickup", pipe.x, pipe.y, pipe.z)
 	local square = getWorld():getCell():getGridSquare(pipe.x, pipe.y, pipe.z);
 	local pipeObject = WaterPipe.findPipeObject(square)
 
 	if square and pipeObject ~= nil then
-		square:transmitRemoveItemFromSquare(pipeObject);
-		square:RemoveTileObject(pipeObject);
-		square:DeleteTileObject(pipeObject);
-
-		for i=1, #WaterPipe.pipes do
-			if WaterPipe.pipes[i].x == pipe.x and 
-				WaterPipe.pipes[i].y == pipe.y and 
-				WaterPipe.pipes[i].z == pipe.z then
-				table.remove(WaterPipe.pipes, i)
-				break
-			end
-		end
-		for i=1, #WaterPipe.modData.waterPipes.pipes do
-			if WaterPipe.modData.waterPipes.pipes[i].x == pipe.x and 
-				WaterPipe.modData.waterPipes.pipes[i].y == pipe.y and 
-				WaterPipe.modData.waterPipes.pipes[i].z == pipe.z then
-				table.remove(WaterPipe.modData.waterPipes.pipes, i)
-				break
-			end
-		end
-
+		Pipe.pipeRemoveTile(pipeObject)
+		
 		-- with player modData : reset when after re login on server
 		-- so when player dies, we don't have useless stuff that remain
 		-- if player:getModData()["removedWaterPipes"] then
@@ -223,16 +255,16 @@ function Pipe.onPickUp(pipe, player)
 				else
 					player:getInventory():AddItem("waterPipes.WaterPipe");
 				end
-				player:Say(getText("IGUI_WaterPipe_EnoughPipeBack"));
+				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_EnoughPipeBack"), HaloTextHelper.getColorGreen());
 				WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 0;
 			else
 				local delta = 10 - WaterPipe.modData.waterPipes.player["removedWaterPipes"];
-				player:Say(getText("IGUI_WaterPipe_RecoverPipeProgress", delta));
+				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", delta), HaloTextHelper.getColorGreen());
 			end
 		else
 			WaterPipe.modData.waterPipes.player = {}
 			WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 1;
-			player:Say(getText("IGUI_WaterPipe_RecoverPipeProgress", 9));
+			HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", 9), HaloTextHelper.getColorGreen());
 		end
 	end
 end

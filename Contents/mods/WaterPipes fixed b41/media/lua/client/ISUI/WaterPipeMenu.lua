@@ -111,7 +111,7 @@ function WaterPipeMenu.doPourNPKMenu(worldobjects, context, subMenu, player, npk
 			context:addSubMenu(fertilizerOption, subMenuFertilizer);			
 						
 			for i=1, use do
-				subMenuFertilizer:addOption(getText("ContextMenu_WaterPipe_Uses"), worldobjects, WaterPipeMenu.onPourFertilizer, i, handItem, square, player, barrel);
+				subMenuFertilizer:addOption(getText("ContextMenu_WaterPipe_Uses", i), worldobjects, WaterPipeMenu.onPourFertilizer, i, handItem, square, player, barrel);
 			end
 			
 		end
@@ -131,18 +131,13 @@ WaterPipeMenu.doPipeMenu = function(player, context, worldobjects)
 			
 			
 			WaterPipeMenu.currentPipe = WaterPipe.getCurrentPipe(square);
-			if WaterPipeMenu.currentPipe ~= nil then
-				print("pipe on right click")
-			else
-				print("no pipe on right click")
-			end
 			
 			local specialObject = nil;
 			if WaterPipeMenu.currentPipe ~= nil then
 				specialObject = WaterPipe.findPipeObject(square)
-				if specialObject ~= nil then
-					print("found special object pipe")
-				end
+--				if specialObject ~= nil then
+--					print("found special object pipe")
+--				end
 			end
 			
 			-- shouldn't remove pipes if watering plants : check WaterPipe.lock == false
@@ -155,12 +150,7 @@ WaterPipeMenu.doPipeMenu = function(player, context, worldobjects)
 			
 			WaterPipeMenu.currentBarrel = WaterPipe.getCurrentBarrel(square);
 			
-			if WaterPipeMenu.currentBarrel ~= nil then
-				print("barrel on right click")
-			else
-				print("no barrel on right click")
-			end
-			
+
 			-- interact with rain barrel for fertilizer
 			--if instanceof(specialObject, "IsoObject") and specialObject:getName() == "Rain Collector Barrel" then
 			if WaterPipeMenu.currentBarrel ~= nil then
