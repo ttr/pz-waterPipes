@@ -175,11 +175,11 @@ end
 
 -- delete sprite and call removal pipe from network
 function Pipe.pipeRemoveTile(pipeObject)
-	local pipe = pipeObject:getSquare();
+	local square = pipeObject:getSquare();
 	square:transmitRemoveItemFromSquare(pipeObject);
 	square:RemoveTileObject(pipeObject);
 	square:DeleteTileObject(pipeObject);
-	Pipe.pipeRemove(pipe:getX(), pipe:getY(), pipe:getZ());
+	Pipe.pipeRemove(square:getX(), square:getY(), square:getZ());
 end
 
 -- delete pipe from network
