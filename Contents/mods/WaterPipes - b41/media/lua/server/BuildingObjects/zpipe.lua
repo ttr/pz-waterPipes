@@ -91,29 +91,31 @@ end
 --
 function Pipe:isValid(square, north)
 	local testForPermitted = false;
-	
+	local specialObjectsCount = square:getSpecialObjects():size();
+	local specialObjectsAllowed = 0;
+
 	for i = 0, square:getObjects():size() - 1 do
 		if square:getObjects():get(i):getName() == "WaterPipe" then
 			return false;
 		end
-		if (square:getObjects():get(i):getType() == IsoObjectType.wall) then
-			testForPermitted = true;
-		end
+--		if (square:getObjects():get(i):getType() == IsoObjectType.wall) then
+--			testForPermitted = true;
+--		end
 
 	end
 
 	-- local door = nil;
-	for i = 0, square:getSpecialObjects():size() - 1 do
+	for i = 0, specialObjectsCount - 1 do
 		if (square:getSpecialObjects():get(i):getType() == IsoObjectType.wall) then
-			testForPermitted = true;
+			specialObjectsAllowed = specialObjectsAllowed + 1;
 		end
 	end
 	
-	if testForPermitted then
+	if specialObjectsAllowed >= specialObjectsCount then
 		return true;
     end
 
-	return ( square:getSpecialObjects():size() == 0 );
+	return false;
 end
 
 
@@ -170,26 +172,38 @@ end
 ---
 -- When pipe is removed / destroyed
 --
+
+-- delete sprite and call removal pipe from network
 function Pipe.pipeRemoveTile(pipeObject)
 
 	square:transmitRemoveItemFromSquare(pipeObject);
 	square:RemoveTileObject(pipeObject);
 	square:DeleteTileObject(pipeObject);
 
-	for i=1, #WaterPipe.pipes do
-		if WaterPipe.pipes[i].x == pipe.x and
-			WaterPipe.pipes[i].y == pipe.y and
-			WaterPipe.pipes[i].z == pipe.z then
+	Pipe.pipeRemove(pipeObject.x, pipeObject.y, pipeObject.z)
+end
+
+-- delete pipe from network
+function Pipe.pipeRemove(x, y , z, breakOnFind)
+	if breakOnFind == nil then
+		breakOnFind = true
+	end
+
+	for i=0, #WaterPipe.pipes do
+		if WaterPipe.pipes[i] and
+			WaterPipe.pipes[i].x == x and
+			WaterPipe.pipes[i].y == y and
+			WaterPipe.pipes[i].z == z then
 			table.remove(WaterPipe.pipes, i)
-			break
+			if breakOnFind then break;end
 		end
 	end
-	for i=1, #WaterPipe.modData.waterPipes.pipes do
-		if WaterPipe.modData.waterPipes.pipes[i].x == pipe.x and
-			WaterPipe.modData.waterPipes.pipes[i].y == pipe.y and
-			WaterPipe.modData.waterPipes.pipes[i].z == pipe.z then
+	for i=0, #WaterPipe.modData.waterPipes.pipes do
+		if WaterPipe.modData.waterPipes.pipes[i] and WaterPipe.modData.waterPipes.pipes[i].x == x and
+			WaterPipe.modData.waterPipes.pipes[i].y == y and
+			WaterPipe.modData.waterPipes.pipes[i].z == z then
 			table.remove(WaterPipe.modData.waterPipes.pipes, i)
-			break
+			if breakOnFind then break;end
 		end
 	end
 end

@@ -82,7 +82,7 @@ function WaterPipe.loadPipes()
 		table.insert(WaterPipe.pipes, WaterPipe.modData.waterPipes.pipes[i])
 	end
 	
-	print(#WaterPipe.modData.waterPipes.pipes .. " loaded");
+	print("WaterPipes: " .. #WaterPipe.modData.waterPipes.pipes .. " loaded");
 end
 
 Events.OnGameStart.Add(WaterPipe.loadPipes);
@@ -402,25 +402,39 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 		square_pos = 4;
 	-- same pos (should never happen)
 	else
+
 		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: " .. pipeTypeIdxA .. " " .. pipeTypeIdxB .. " " .. xA .. " " .. yA .. " " .. xB .. " " .. yB .. " " .. z);
 		if pipeTypeIdxA == 12 then -- A is barrel, delete B
 			local square = getWorld():getCell():getGridSquare(xB, yB, z);
 			local pipeObject = WaterPipe.findPipeObject(square)
 			if square and pipeObject ~= nil then
-			   Pipe.pipeRemoveTile(pipeObject)
-			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted " .. pipeTypeIdxB ..  " " .. xB .. " " .. yB .. " " .. z);
+			   print("sprite found - deleting fingle object");
+			   Pipe.pipeRemoveTile(pipeObject);
+			else
+				print("sprite not found, detelint all references in pipe network - might take a while");
+				Pipe.pipeRemove(xB, yB, z, false);
 			end
 		elseif pipeTypeIdxB == 12 then  -- B is barrel, delete A
 			local square = getWorld():getCell():getGridSquare(xA, yA, z);
 			local pipeObject = WaterPipe.findPipeObject(square)
 			if square and pipeObject ~= nil then
-			   Pipe.pipeRemoveTile(pipeObject)
-			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted " .. pipeTypeIdxA ..  " " .. xA .. " " .. yA .. " " .. z);
+			   print("sprite found - deleting fingle object");
+			   Pipe.pipeRemoveTile(pipeObject);
+			else
+				print("sprite not found, detelint all references in pipe network - might take a while");
+				Pipe.pipeRemove(xA, yA, z, false);
+			end
+		else --both elemts are pipes / delete both
+			local square = getWorld():getCell():getGridSquare(xA, yA, z);
+			local pipeObject = WaterPipe.findPipeObject(square)
+			if square and pipeObject ~= nil then
+			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted both " .. xA .. " " .. yA .. " " .. z);
+			   Pipe.pipeRemoveTile(pipeObject);
+			   Pipe.pipeRemove(xA, yA, z, false);
 			end
 		end
 	end
-	
-	
+
 	if square_pos == 1 then
 		-- print(pipeTypeIdxA .. " north of " .. pipeTypeIdxB);
 		if ( pipeTypeIdxA == 1 or pipeTypeIdxA == 3 or pipeTypeIdxA == 4 or pipeTypeIdxA == 5 or pipeTypeIdxA == 9 or pipeTypeIdxA == 10 or pipeTypeIdxA == 11 ) and ( pipeTypeIdxB == 1 or pipeTypeIdxB == 3 or pipeTypeIdxB == 6 or pipeTypeIdxB == 7 or pipeTypeIdxB == 8 or pipeTypeIdxB == 10 or pipeTypeIdxB == 11 or pipeTypeIdxB == 12 ) then
