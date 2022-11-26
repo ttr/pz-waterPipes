@@ -175,16 +175,16 @@ end
 
 -- delete sprite and call removal pipe from network
 function Pipe.pipeRemoveTile(pipeObject)
-
+	local pipe = pipeObject:getSquare();
 	square:transmitRemoveItemFromSquare(pipeObject);
 	square:RemoveTileObject(pipeObject);
 	square:DeleteTileObject(pipeObject);
-
-	Pipe.pipeRemove(pipeObject.x, pipeObject.y, pipeObject.z)
+	Pipe.pipeRemove(pipe:getX(), pipe:getY(), pipe:getZ());
 end
 
 -- delete pipe from network
 function Pipe.pipeRemove(x, y , z, breakOnFind)
+	--print('\t', "pipeRemove",x, y, z, breakOnFind);
 	if breakOnFind == nil then
 		breakOnFind = true
 	end
@@ -194,16 +194,18 @@ function Pipe.pipeRemove(x, y , z, breakOnFind)
 			WaterPipe.pipes[i].x == x and
 			WaterPipe.pipes[i].y == y and
 			WaterPipe.pipes[i].z == z then
-			table.remove(WaterPipe.pipes, i)
-			if breakOnFind then break;end
+				table.remove(WaterPipe.pipes, i)
+				--print('\t', "pipes 1", x, y, z);
+				if breakOnFind then break;end
 		end
 	end
 	for i=0, #WaterPipe.modData.waterPipes.pipes do
 		if WaterPipe.modData.waterPipes.pipes[i] and WaterPipe.modData.waterPipes.pipes[i].x == x and
 			WaterPipe.modData.waterPipes.pipes[i].y == y and
 			WaterPipe.modData.waterPipes.pipes[i].z == z then
-			table.remove(WaterPipe.modData.waterPipes.pipes, i)
-			if breakOnFind then break;end
+				table.remove(WaterPipe.modData.waterPipes.pipes, i)
+				--print('\t',"pipes 2", x, y, z);
+				if breakOnFind then break;end
 		end
 	end
 end
@@ -217,7 +219,9 @@ function Pipe.onPipeDestroy(pipe)
 	end
 end
 
+-- pipe pickup
 function Pipe.onPickUp(pipe, player)
+	--print('\t', "Pipe pickup", pipe.x, pipe.y, pipe.z)
 	local square = getWorld():getCell():getGridSquare(pipe.x, pipe.y, pipe.z);
 	local pipeObject = WaterPipe.findPipeObject(square)
 

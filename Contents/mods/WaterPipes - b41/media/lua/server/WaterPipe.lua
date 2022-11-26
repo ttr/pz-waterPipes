@@ -911,8 +911,8 @@ function WaterPipe.updatePipes()
 	end
 
 	WaterPipe.lock = true;
-	
-	if WaterPipe.modData.waterPipes["check_infinite"] == nil then
+	print(WaterPipe.modData.waterPipes["check_infinite"]);
+	if not WaterPipe.modData.waterPipes["check_infinite"] then
 		WaterPipe.modData.waterPipes["check_infinite"] = "true";
 	end
 	
