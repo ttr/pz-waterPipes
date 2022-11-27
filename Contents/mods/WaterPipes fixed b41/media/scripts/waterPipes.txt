@@ -1,31 +1,40 @@
 module waterPipes
 {
-
 	imports
 	{
 		Base, farming,
 	}
 
-
 	item WaterPipe
 	{
 		Type = Drainable,
-		DisplayName = Irrigation Pipe,
+		DisplayName = Old Irrigation Pipe,
 		Icon = WaterPipe.png,
 		UseDelta = 0.1,
 		UseWhileEquipped = false,
 		Weight = 1.5, 
 	}
 
-	
+	item WaterPipe2
+	{
+		DisplayName = Irrigation Pipe,
+		Icon = WaterPipe.png,
+		UseDelta = 0.1,
+		Weight = 0.15,
+	}
+
 	recipe Make Irrigation Pipe
 	{
 		MetalPipe,
-		
 		keep Hammer/HammerStone/BallPeenHammer,
 		keep Screwdriver,
-		
-		Result: WaterPipe,
+		Result: WaterPipe2=10,
 		Time:30.0,
+	}
+	recipe Convert Irrigation pipe,
+	{
+		WaterPipe,
+		Result: WaterPipe2,
+		Time:1,
 	}
 }

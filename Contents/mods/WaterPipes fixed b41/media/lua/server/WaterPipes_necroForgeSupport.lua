@@ -6,7 +6,7 @@ Events.OnGameStart.Add( function ()
 		if NecroList.Items.WaterPipe then		
 		else
 			-- print("Adding garden hose to necro list");
-			NecroList.Items.WaterPipe = {"Farming", nil, nil, "Irrigation Pipe", "waterPipes.WaterPipe", "Item_WaterPipe", nil, nil, nil};
+			NecroList.Items.WaterPipe = {"Farming", nil, nil, "Irrigation Pipe", "waterPipes.WaterPipe2", "Item_WaterPipe", nil, nil, nil};
 		end
 	end
 	

@@ -730,16 +730,15 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 			for id, apipe in ipairs(WaterPipe.pipes) do
 				if k[id] == 'ok' then
 					for _, plant in ipairs(planting[id]) do
-						
-						-- HC chnages min/max water levels per plant, so we will need to use those and we will keep in middle of those.
-						if getActivatedMods():contains("Hydrocraft") and farming_vegetableconf then
-							waterNeeded = (farming_vegetableconf.props[plant.typeOfSeed].waterLvlMax + farming_vegetableconf.props[plant.typeOfSeed].waterLvl) / 2;
+
+						if plant.waterNeededMax then
+							waterNeeded = (plant.waterNeeded + plant.waterNeededMax)/2;
 						else
 							waterNeeded = plant.waterNeeded;
 						end
 						-- max water up is 30 plant units -- penalty for automation
 						waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), 30);
-						-- print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
+						print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
 
 						if waterNeeded > 0 then
 							if waterPerCluster[k] < waterNeeded then
@@ -1112,4 +1111,21 @@ function WaterPipe.pourFertilizer(npkItem, barrel, square, character, touse)
 	
 	--barrel:saveData();
 	
+end
+
+function WaterPipe.onCreateMigratepipes(items, result, player)
+	local pipesToAdd=0;
+	for i=0,items:size() - 1 do
+		if items:get(i):getType() == "WaterPipe" then
+			tool = items:get(i)
+			condition = tool:getCondition()
+		end
+    end
+	pipesToAdd = math.floor(condition * 10);
+	-- start from 1 as 1 is added by recipe
+	if pipesToAdd > 1 then
+		for i=2,pipesToAdd,1 do
+			player:getInventory():AddItem("waterPipes.WaterPipe2");
+		end
+	end
 end
