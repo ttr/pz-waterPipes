@@ -195,6 +195,7 @@ WaterPipeMenu.doPipeMenu = function(player, context, worldobjects)
 	-- wp2
 	if handItem and handItem:getType() == "WaterPipe2" then
 		pipeItem = handItem;
+		canUsepipeItem = true;
 	elseif playerInventory:contains("WaterPipe2") then
 		pipeItem = getSpecificPlayer(player):getInventory():FindAndReturn('WaterPipe2');
 		canUsepipeItem = true;

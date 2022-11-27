@@ -14,9 +14,9 @@ function Pipe.checkForBarrel(square)
 end
 
 function Pipe:create(x, y, z, north, sprite)
-	if not self.playerObject:isEquipped(self.pipeItem) then
+	if not self.playerObject:isEquipped(self.pipeItem) and not self.playerObject:getInventory():contains("WaterPipe2") then
 		self:reset();
-	elseif math.abs(self.pipeItem:getUsedDelta()-self.pipeItem:getUseDelta()) < 0.1 or math.floor(self.pipeItem:getUsedDelta()/self.pipeItem:getUseDelta()) > 0 then
+	else
 		local cell = getWorld():getCell();
 		self.sq = cell:getGridSquare(x, y, z);
 		self.javaObject = IsoObject.new(self.sq, sprite, "WaterPipe");
@@ -71,7 +71,8 @@ function Pipe:create(x, y, z, north, sprite)
 		end
 
 		table.insert(WaterPipe.pipes, pipe);
-		self.pipeItem:Use();
+		self.playerObject:removeFromHands(self.pipeItemgit di);
+		self.playerObject:getInventory():Remove("WaterPipe2");
 
 		--self.sq:AddSpecialObject(self.javaObject);
 		self.sq:AddTileObject(self.javaObject);
@@ -79,9 +80,6 @@ function Pipe:create(x, y, z, north, sprite)
 
 		self.javaObject:transmitCompleteItemToServer();
 		self.javaObject:transmitCompleteItemToClients();
-	else
-		self.playerObject:Say(getText("IGUI_WaterPipe_NoMorePipe"));
-		ISTimedActionQueue.add(ISUnequipAction:new(self.playerObject, self.pipeItem, 50));
 	end
 end
 
