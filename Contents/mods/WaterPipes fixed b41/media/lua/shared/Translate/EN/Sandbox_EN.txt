@@ -1,0 +1,5 @@
+Sandbox_EN = {
+	Sandbox_WaterPipes = "Drip Irrigation Mod",
+	Sandbox_WaterPipes_SmartPipes = "Smart pipes: enable pre-fill and optimal water levels.",
+	Sandbox_WaterPipes_SmartPipesFillMax = "SmartPipes: Maximum amount of water added per watering cycle.",
+}

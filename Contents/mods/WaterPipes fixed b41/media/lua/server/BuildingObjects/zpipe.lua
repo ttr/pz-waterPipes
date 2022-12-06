@@ -71,7 +71,7 @@ function Pipe:create(x, y, z, north, sprite)
 		end
 
 		table.insert(WaterPipe.pipes, pipe);
-		self.playerObject:removeFromHands(self.pipeItemgit di);
+		self.playerObject:removeFromHands(self.pipeItem);
 		self.playerObject:getInventory():Remove("WaterPipe2");
 
 		--self.sq:AddSpecialObject(self.javaObject);

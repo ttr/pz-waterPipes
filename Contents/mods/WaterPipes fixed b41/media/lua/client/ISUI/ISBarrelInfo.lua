@@ -29,12 +29,17 @@ function ISBarrelInfo:render()
 	if self.barrel.decimalPart then
 		waterAmount = waterAmount + self.barrel.decimalPart;
 	end
+	waterAmount = string.format("%.2f", waterAmount);
+
+	if self.barrel.clusterWaterLevel then
+		waterAmount = waterAmount .. "/" .. string.format("%.2f", self.barrel.clusterWaterLevel);
+	end
 	
 	local description = "";
-	description = description .. getText("IGUI_WaterPipe_WaterAmount", string.format("%.2f", waterAmount)) .. "\n\n";
+	description = description .. getText("IGUI_WaterPipe_WaterAmount", waterAmount) .. "\n";
 	
 	if self.barrel.fertilizerLvl then
-		description = description .. getText("IGUI_WaterPipe_FertilizerAmount",  self.barrel.fertilizerLvl) .. "\n\n";
+		description = description .. getText("IGUI_WaterPipe_FertilizerAmount", self.barrel.fertilizerLvl) .. "\n";
 	end
 	
 	self:drawText(description, 20, 25, 1, 1, 1, 1, UIFont.Small);

@@ -8,7 +8,7 @@ WP_RCB.RainCollectorBarrelInitSystem = SRainBarrelSystem.initSystem;
 function SRainBarrelSystem:initSystem()
 	WP_RCB.RainCollectorBarrelInitSystem(self)
 	-- Specify GlobalObject fields that should be saved.
-	self.system:setObjectModDataKeys({'exterior', 'taintedWater', 'waterAmount', 'waterMax', 'fertilizerLvl', 'decimalPart'})
+	self.system:setObjectModDataKeys({'exterior', 'taintedWater', 'waterAmount', 'waterMax', 'fertilizerLvl', 'decimalPart', 'clusterWaterLevel'})
 	print("irrigation rain collector barrel object modData keys added")
 
 	self:convertOldModData()
@@ -22,6 +22,7 @@ function RainCollectorBarrel:create(x, y, z, north, sprite)
 
 	self.javaObject:getModData()["fertilizerLvl"] = 0;
 	self.javaObject:getModData()["decimalPart"] = 0;
+	self.javaObject:getModData()["clusterWaterLevel"] = 0;
 
 	local barrel = nil;
 	local square = getWorld():getCell():getGridSquare(x, y, z);
@@ -37,6 +38,7 @@ function RainCollectorBarrel:create(x, y, z, north, sprite)
 	if barrel ~= nil then
 		barrel.fertilizerLvl = 0
 		barrel.decimalPart = 0
+		barrel.clusterWaterLevel = 0
 
 	else
 		-- print("RainCollectorBarrel:create: No barrel found at "..square:getX().."x"..square:getY().."x"..square:getZ().."!");
@@ -76,6 +78,11 @@ function RainCollectorBarrel.loadRainBarrel(barrelObject)
 		barrelObject:getModData()["decimalPart"] = 0
 		barrelObject:transmitModData();
 	end
+	if not barrelObject:getModData()["clusterWaterLevel"] then
+		barrelObject:getModData()["clusterWaterLevel"] = 0
+		barrelObject:transmitModData();
+	end
 	barrel.fertilizerLvl = barrelObject:getModData()["fertilizerLvl"]
 	barrel.decimalPart = barrelObject:getModData()["decimalPart"]
+	barrel.clusterWaterLevel = barrelObject:getModData()["clusterWaterLevel"]
 end

@@ -1,0 +1,13 @@
+VERSION = 1,
+
+option WaterPipes.SmartPipes
+{
+	type = boolean, default = true,
+	page = WaterPipes, translation = WaterPipes_SmartPipes,
+}
+
+option WaterPipes.SmartPipesFillMax
+{
+	type = integer, min = 3, max = 100, default = 20,
+	page = WaterPipes, translation = WaterPipes_SmartPipesFillMax,
+}
