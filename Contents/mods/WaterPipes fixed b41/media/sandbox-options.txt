@@ -11,3 +11,9 @@ option WaterPipes.SmartPipesFillMax
 	type = integer, min = 3, max = 100, default = 20,
 	page = WaterPipes, translation = WaterPipes_SmartPipesFillMax,
 }
+
+option WaterPipes.SmartPipesUpdateNotWatered
+{
+	type = boolean, default = false,
+	page = WaterPipes, translation = WaterPipes_SmartPipesUpdateNotWatered,
+}

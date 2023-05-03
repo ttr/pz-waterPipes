@@ -760,6 +760,10 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 							local farmsystem = SFarmingSystem.instance;
 							plant.lastWaterHour = farmsystem.hoursElapsed;
 							plant:saveData();
+						elseif SandboxVars.WaterPipes.SmartPipesUpdateNotWatered and waterNeeded <= 0 then
+							local farmsystem = SFarmingSystem.instance;
+							plant.lastWaterHour = farmsystem.hoursElapsed;
+							plant:saveData();
 						end
 					end
 					if stop then

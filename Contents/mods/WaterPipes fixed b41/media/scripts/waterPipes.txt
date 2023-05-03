@@ -19,7 +19,6 @@ module waterPipes
 	{
 		DisplayName = Irrigation Pipe,
 		Icon = WaterPipe.png,
-		UseDelta = 0.1,
 		Weight = 0.15,
 	}
 
@@ -31,7 +30,7 @@ module waterPipes
 		Result: WaterPipe2=10,
 		Time:30.0,
 	}
-	recipe Convert Irrigation pipe,
+	recipe Convert Irrigation pipe
 	{
 		WaterPipe,
 		Result: WaterPipe2,
