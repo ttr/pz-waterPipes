@@ -192,19 +192,13 @@ WaterPipeMenu.doPipeMenu = function(player, context, worldobjects)
 	local canUsepipeItem = false;
 	local handItem = getSpecificPlayer(player):getSecondaryHandItem();
 	
-	if handItem and handItem:getType() == "WaterPipe" and ( math.abs(handItem:getUsedDelta()-handItem:getUseDelta()) < 0.1 or math.floor(handItem:getUsedDelta()/handItem:getUseDelta()) > 0 ) then
-		canUsepipeItem = true;
+	-- wp2
+	if handItem and handItem:getType() == "WaterPipe2" then
 		pipeItem = handItem;
-	else
-		if playerInventory:contains("WaterPipe") then		
-			for i = 0, getSpecificPlayer(player):getInventory():getItems():size() - 1 do
-				pipeItem = getSpecificPlayer(player):getInventory():getItems():get(i);
-				if pipeItem:getType() == "WaterPipe" and ( math.abs(pipeItem:getUsedDelta()-pipeItem:getUseDelta()) < 0.1 or math.floor(pipeItem:getUsedDelta()/pipeItem:getUseDelta()) > 0 ) then
-					canUsepipeItem = true;
-					break;
-				end
-			end
-		end
+		canUsepipeItem = true;
+	elseif playerInventory:contains("WaterPipe2") then
+		pipeItem = getSpecificPlayer(player):getInventory():FindAndReturn('WaterPipe2');
+		canUsepipeItem = true;
 	end
 	
 	if canUsepipeItem then
@@ -341,9 +335,6 @@ end
 -- Create a new pipe to drag
 --
 WaterPipeMenu.onPlacePipe = function(worldobjects, player, pipeItem, spritea, pipeType)	
-	if getSpecificPlayer(player):getSecondaryHandItem() ~= pipeItem then
-		ISTimedActionQueue.add(ISEquipWeaponAction:new(getSpecificPlayer(player), pipeItem, 50, false));
-	end
 	
 	local pipe = Pipe:new(player, pipeItem, spritea, pipeType);
 	

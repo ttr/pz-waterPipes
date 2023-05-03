@@ -14,9 +14,9 @@ function Pipe.checkForBarrel(square)
 end
 
 function Pipe:create(x, y, z, north, sprite)
-	if not self.playerObject:isEquipped(self.pipeItem) then
+	if not self.playerObject:isEquipped(self.pipeItem) and not self.playerObject:getInventory():contains("WaterPipe2") then
 		self:reset();
-	elseif math.abs(self.pipeItem:getUsedDelta()-self.pipeItem:getUseDelta()) < 0.1 or math.floor(self.pipeItem:getUsedDelta()/self.pipeItem:getUseDelta()) > 0 then
+	else
 		local cell = getWorld():getCell();
 		self.sq = cell:getGridSquare(x, y, z);
 		self.javaObject = IsoObject.new(self.sq, sprite, "WaterPipe");
@@ -71,7 +71,8 @@ function Pipe:create(x, y, z, north, sprite)
 		end
 
 		table.insert(WaterPipe.pipes, pipe);
-		self.pipeItem:Use();
+		self.playerObject:removeFromHands(self.pipeItem);
+		self.playerObject:getInventory():Remove("WaterPipe2");
 
 		--self.sq:AddSpecialObject(self.javaObject);
 		self.sq:AddTileObject(self.javaObject);
@@ -79,9 +80,6 @@ function Pipe:create(x, y, z, north, sprite)
 
 		self.javaObject:transmitCompleteItemToServer();
 		self.javaObject:transmitCompleteItemToClients();
-	else
-		self.playerObject:Say(getText("IGUI_WaterPipe_NoMorePipe"));
-		ISTimedActionQueue.add(ISUnequipAction:new(self.playerObject, self.pipeItem, 50));
 	end
 end
 
@@ -175,11 +173,11 @@ end
 
 -- delete sprite and call removal pipe from network
 function Pipe.pipeRemoveTile(pipeObject)
-	local pipe = pipeObject:getSquare();
+	local square = pipeObject:getSquare();
 	square:transmitRemoveItemFromSquare(pipeObject);
 	square:RemoveTileObject(pipeObject);
 	square:DeleteTileObject(pipeObject);
-	Pipe.pipeRemove(pipe:getX(), pipe:getY(), pipe:getZ());
+	Pipe.pipeRemove(square:getX(), square:getY(), square:getZ());
 end
 
 -- delete pipe from network
@@ -228,43 +226,23 @@ function Pipe.onPickUp(pipe, player)
 	if square and pipeObject ~= nil then
 		Pipe.pipeRemoveTile(pipeObject)
 		
-		-- with player modData : reset when after re login on server
-		-- so when player dies, we don't have useless stuff that remain
-		-- if player:getModData()["removedWaterPipes"] then
-		-- print("player has already removed some pipes")
-		-- player:getModData()["removedWaterPipes"] = player:getModData()["removedWaterPipes"] + 1;
-		-- if player:getModData()["removedWaterPipes"] == 10 then
-		-- player:sendObjectChange('addItemOfType', { type = "waterPipes.WaterPipe", count = 1 })
-		-- player:Say("I got enough pipes back");
-		-- player:getModData()["removedWaterPipes"] = 0;
-		-- else
-		-- local delta = 10 - player:getModData()["removedWaterPipes"];
-		-- player:Say("I got one pipe back, " .. delta .. " more before I get the whole back");
-		-- end
-		-- else
-		-- print("player didn't remove any pipe")
-		-- player:getModData()["removedWaterPipes"] = 1;
-		-- player:Say("I got one pipe back, 9 more before I get the whole back");
-		-- end
-
-		if WaterPipe.modData.waterPipes.player and WaterPipe.modData.waterPipes.player["removedWaterPipes"] then
-			WaterPipe.modData.waterPipes.player["removedWaterPipes"] = WaterPipe.modData.waterPipes.player["removedWaterPipes"] + 1;
-			if WaterPipe.modData.waterPipes.player["removedWaterPipes"] == 10 then
-				if isServer() then
-					player:sendObjectChange('addItemOfType', { type = "waterPipes.WaterPipe", count = 1 });
-				else
-					player:getInventory():AddItem("waterPipes.WaterPipe");
-				end
-				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_EnoughPipeBack"), HaloTextHelper.getColorGreen());
-				WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 0;
-			else
-				local delta = 10 - WaterPipe.modData.waterPipes.player["removedWaterPipes"];
-				HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", delta), HaloTextHelper.getColorGreen());
-			end
+		-- wp2
+		if isServer() then
+			player:sendObjectChange('addItemOfType', { type = "waterPipes.WaterPipe2", count = 1 });
 		else
-			WaterPipe.modData.waterPipes.player = {}
-			WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 1;
-			HaloTextHelper.addText(player, getText("IGUI_WaterPipe_RecoverPipeProgress", 9), HaloTextHelper.getColorGreen());
+			player:getInventory():AddItem("waterPipes.WaterPipe2");
+		end
+
+		-- refund partial pipes mk1
+		if WaterPipe.modData.waterPipes.player and WaterPipe.modData.waterPipes.player["removedWaterPipes"] and WaterPipe.modData.waterPipes.player["removedWaterPipes"] > 0 then
+			if isServer() then
+				player:sendObjectChange('addItemOfType', { type = "waterPipes.WaterPipe2", count = WaterPipe.modData.waterPipes.player["removedWaterPipes"] });
+			else
+				for i=1,WaterPipe.modData.waterPipes.player["removedWaterPipes"],1 do
+					player:getInventory():AddItem("waterPipes.WaterPipe2");
+				end
+			end
+			WaterPipe.modData.waterPipes.player["removedWaterPipes"] = 0;
 		end
 	end
 end

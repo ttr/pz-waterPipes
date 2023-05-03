@@ -209,11 +209,14 @@ function WaterPipe.getPipeAt(x,y,z)
 end
 
 function WaterPipe.findPipeObject(square)
-	for i=0,square:getObjects():size()-1 do
-		local object = square:getObjects():get(i)
-		if object:getName() == "WaterPipe" then
-			return object
+	if square ~= nil and square:getObjects() ~= nil and square:getObjects():size() ~= nil then
+		for i=0,square:getObjects():size()-1 do
+			local object = square:getObjects():get(i)
+			if object:getName() == "WaterPipe" then
+				return object
+			end
 		end
+		return nil
 	end
 	return nil
 end
@@ -299,7 +302,7 @@ function WaterPipe.updateBarrel(b, waterPerCluster, waterNeededPerCluster, barre
 		
 		if newLevel > 0 then
 			b.waterAmount = newLevel;
-			
+			-- ttr note - re-do this to not look for 40 but check if max <  amount.
 			if b.waterMax == 40 and b.waterAmount > 40 then
 				max40 = true;
 				-- if fertilizerLvl == 0 then
@@ -343,6 +346,9 @@ function WaterPipe.updateBarrel(b, waterPerCluster, waterNeededPerCluster, barre
 			if b.decimalPart then
 				obj:getModData()["decimalPart"] = b.decimalPart
 			end
+			-- why we need two places? oh, pz39, thats why, also double/float
+			obj:getModData()["clusterWaterLevel"] = waterPerCluster;
+			b.clusterWaterLevel = waterPerCluster * 1.0;
 			obj:setWaterAmount(b.waterAmount) -- will trigger sprite change and saveData
 			obj:transmitModData()
 		end
@@ -403,22 +409,22 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 	-- same pos (should never happen)
 	else
 
-		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: " .. pipeTypeIdxA .. " " .. pipeTypeIdxB .. " " .. xA .. " " .. yA .. " " .. xB .. " " .. yB .. " " .. z);
+		print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: " .. pipeTypeIdxA .. " " .. pipeTypeIdxB .. " " .. xA .. " " .. yA .. " " .. z);
 		if pipeTypeIdxA == 12 then -- A is barrel, delete B
 			local square = getWorld():getCell():getGridSquare(xB, yB, z);
 			local pipeObject = WaterPipe.findPipeObject(square)
 			if square and pipeObject ~= nil then
-			   print("sprite found - deleting fingle object");
+			   print("WaterPipe.areConnected : sprite found - deleting single object");
 			   Pipe.pipeRemoveTile(pipeObject);
 			else
-				print("sprite not found, detelint all references in pipe network - might take a while");
+				print("WaterPipe.areConnected : sprite not found, detelint all references in pipe network - might take a while");
 				Pipe.pipeRemove(xB, yB, z, false);
 			end
 		elseif pipeTypeIdxB == 12 then  -- B is barrel, delete A
 			local square = getWorld():getCell():getGridSquare(xA, yA, z);
 			local pipeObject = WaterPipe.findPipeObject(square)
 			if square and pipeObject ~= nil then
-			   print("sprite found - deleting fingle object");
+			   print("WaterPipe.areConnected : sprite found - deleting single object");
 			   Pipe.pipeRemoveTile(pipeObject);
 			else
 				print("sprite not found, detelint all references in pipe network - might take a while");
@@ -428,10 +434,11 @@ function WaterPipe.areConnected(pipeTypeIdxA, pipeTypeIdxB, xA, yA, xB, yB, z)
 			local square = getWorld():getCell():getGridSquare(xA, yA, z);
 			local pipeObject = WaterPipe.findPipeObject(square)
 			if square and pipeObject ~= nil then
-			   print("WaterPipe.areConnected : TWO ITEMS ON SAME SQUARE: - deleted both " .. xA .. " " .. yA .. " " .. z);
+			   print("WaterPipe.areConnected : sprite found -> deleted");
 			   Pipe.pipeRemoveTile(pipeObject);
-			   Pipe.pipeRemove(xA, yA, z, false);
 			end
+		print("WaterPipe.areConnected : removing all mod entries to broken square");
+		Pipe.pipeRemove(xA, yA, z, false);
 		end
 	end
 
@@ -730,16 +737,17 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 			for id, apipe in ipairs(WaterPipe.pipes) do
 				if k[id] == 'ok' then
 					for _, plant in ipairs(planting[id]) do
-						
-						-- HC chnages min/max water levels per plant, so we will need to use those and we will keep in middle of those.
-						if getActivatedMods():contains("Hydrocraft") and farming_vegetableconf then
-							waterNeeded = (farming_vegetableconf.props[plant.typeOfSeed].waterLvlMax + farming_vegetableconf.props[plant.typeOfSeed].waterLvl) / 2;
+						if SandboxVars.WaterPipes.SmartPipes then
+							if plant.waterNeededMax then
+								waterNeeded = (plant.waterNeeded + plant.waterNeededMax)/2;
+							else
+								waterNeeded = plant.waterNeeded;
+							end
+							waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), SandboxVars.WaterPipes.SmartPipesFillMax);
+							-- print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
 						else
-							waterNeeded = plant.waterNeeded;
+							waterNeeded = 1;
 						end
-						-- max water up is 30 plant units -- penalty for automation
-						waterNeeded = math.min((waterNeeded - plant.waterLvl + 2), 30);
-						-- print(plant.typeOfSeed .. "  " .. plant.waterLvl .. " " .. " ".. waterNeeded);
 
 						if waterNeeded > 0 then
 							if waterPerCluster[k] < waterNeeded then
@@ -749,6 +757,10 @@ function WaterPipe.waterPlants(clusters, planting, waterPerCluster, fertilizerPe
 							plant.waterLvl = plant.waterLvl + waterNeeded ;
 							-- barrel units to plant units ratio is 5, we will use 4 to make some penalty for automaiton
 							waterPerCluster[k] = waterPerCluster[k] - (waterNeeded / 4);
+							local farmsystem = SFarmingSystem.instance;
+							plant.lastWaterHour = farmsystem.hoursElapsed;
+							plant:saveData();
+						elseif SandboxVars.WaterPipes.SmartPipesUpdateNotWatered and waterNeeded <= 0 then
 							local farmsystem = SFarmingSystem.instance;
 							plant.lastWaterHour = farmsystem.hoursElapsed;
 							plant:saveData();
@@ -911,8 +923,8 @@ function WaterPipe.updatePipes()
 	end
 
 	WaterPipe.lock = true;
-	print(WaterPipe.modData.waterPipes["check_infinite"]);
-	if not WaterPipe.modData.waterPipes["check_infinite"] then
+
+	if WaterPipe.modData.waterPipes["check_infinite"] == nil then
 		WaterPipe.modData.waterPipes["check_infinite"] = "true";
 	end
 	
@@ -1112,4 +1124,21 @@ function WaterPipe.pourFertilizer(npkItem, barrel, square, character, touse)
 	
 	--barrel:saveData();
 	
+end
+
+function WaterPipe.onCreateMigratepipes(items, result, player)
+	local pipesToAdd=0;
+	for i=0,items:size() - 1 do
+		if items:get(i):getType() == "WaterPipe" then
+			tool = items:get(i)
+			condition = tool:getCondition()
+		end
+    end
+	pipesToAdd = math.floor(condition * 10);
+	-- start from 1 as 1 is added by recipe
+	if pipesToAdd > 1 then
+		for i=2,pipesToAdd,1 do
+			player:getInventory():AddItem("waterPipes.WaterPipe2");
+		end
+	end
 end
